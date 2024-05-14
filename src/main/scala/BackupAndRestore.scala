@@ -11,7 +11,7 @@ class BackupAndRestore(source: RedisService, target: RedisService) {
     .restoreParams()
     .replace()
 
-  def execute(scanPattern: String): Unit = {
+  def execute(scanPattern: String, excludePatterns: List[String]): Unit = {
     if (source.ping() != "PONG") throw new Exception(s"Failed to connect with source server")
     if (target.ping() != "PONG") throw new Exception(s"Failed to connect with target server")
 
@@ -19,15 +19,28 @@ class BackupAndRestore(source: RedisService, target: RedisService) {
     println(s"Target Connection: ${target.connectionName}")
 
     println("\nScanning keys to take backup...")
-    val keys = source
+    val allKeys = source
       .scan("", new ScanParams().`match`(scanPattern).count(BACKUP_SCAN_COUNT))
       .getResult
-    val keysCount = keys.size()
-    println(s"Total no. of keys found: $keysCount")
-
-    val progressBar = new ProgressBar("Starting backup & restore", keysCount)
-    val result = keys
       .toSList
+    val excludeStartWithPatterns = excludePatterns
+      .filter(_.endsWith("*"))
+      .map(str => str.slice(0, str.length-1))
+    val excludeEndsWithPatterns = excludePatterns
+      .filter(_.startsWith("*"))
+      .map(str => str.slice(1, str.length))
+    val excludeStrings = excludePatterns
+      .filterNot(str => str.startsWith("*") || str.endsWith("*"))
+    val selectedKeys = allKeys
+      .filterNot(str => excludeStartWithPatterns.exists(str.startsWith))
+      .filterNot(str => excludeEndsWithPatterns.exists(str.endsWith))
+      .filterNot(str => excludeStrings.contains(str))
+
+    println(s"Total no. of keys found: ${allKeys.length}")
+    println(s"No. of selected keys by pattern: ${selectedKeys.length}")
+
+    val progressBar = new ProgressBar("Starting backup & restore", selectedKeys.length)
+    val result = selectedKeys
       .zipWithIndex
       .map(data => {
         val (key, index) = data
@@ -49,7 +62,7 @@ class BackupAndRestore(source: RedisService, target: RedisService) {
   }
 
   def execute(): Unit = {
-    execute(BACKUP_DEFAULT_PATTERN)
+    execute(BACKUP_DEFAULT_PATTERN, List())
   }
 
 }

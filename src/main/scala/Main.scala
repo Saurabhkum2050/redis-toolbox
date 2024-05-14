@@ -3,27 +3,29 @@ object Main extends App {
 
   private val sourceConn = try {
     new RedisService(
-      sys.env("SOURCE_HOST"),
-      sys.env("SOURCE_PORT").toInt,
-      sys.env("SOURCE_SECRET"),
-      sys.env("SOURCE_DB").toInt
+      Environment.get("SOURCE_HOST", "localhost"),
+      Environment.get("SOURCE_PORT", "6379").toInt,
+      Environment.get("SOURCE_SECRET"),
+      Environment.get("SOURCE_DB", "0").toInt
     )
   } catch {
     case e: Throwable => throw new Exception(s"Failed to initialize source connection: ${e.getMessage}")
   }
-
   private val targetConn = try {
     new RedisService(
-      sys.env("TARGET_HOST"),
-      sys.env("TARGET_PORT").toInt,
-      sys.env("TARGET_SECRET"),
-      sys.env("TARGET_DB").toInt
+      Environment.get("TARGET_HOST", "localhost"),
+      Environment.get("TARGET_PORT", "6379").toInt,
+      Environment.get("TARGET_SECRET"),
+      Environment.get("TARGET_DB", "0").toInt
     )
   } catch {
     case e: Throwable => throw new Exception(s"Failed to initialize target connection: ${e.getMessage}")
   }
-
   private val backupAndRestore = new BackupAndRestore(sourceConn, targetConn)
-  backupAndRestore.execute()
+
+  private val scanPattern = Environment.get("SCAN_PATTERN", "*")
+  private val excludePattern = Environment.get("EXCLUDE_PATTERNS").split(",").toList
+
+  backupAndRestore.execute(scanPattern, excludePattern)
 
 }
