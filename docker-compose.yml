@@ -1,11 +1,10 @@
-
 services:
   redis-toolbox:
     build:
       dockerfile: ./Dockerfile
-      context: ..
+      context: .
     container_name: RedisToolBox
-    restart: always
+    restart: no
     environment:
       SOURCE_HOST: localhost
       SOURCE_PORT: 6379
