@@ -1,0 +1,17 @@
+
+services:
+  redis-toolbox:
+    build:
+      dockerfile: ./Dockerfile
+      context: ..
+    container_name: RedisToolBox
+    restart: always
+    environment:
+      SOURCE_HOST: localhost
+      SOURCE_PORT: 6379
+      SOURCE_SECRET: shanky
+      SOURCE_DB: 0
+      TARGET_HOST: localhost
+      TARGET_PORT: 6379
+      TARGET_SECRET: shanky
+      TARGET_DB: 1
