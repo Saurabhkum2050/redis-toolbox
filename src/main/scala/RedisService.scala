@@ -46,4 +46,12 @@ class RedisService(host: String, port: Int = 6379, secret: String = "", db: Int 
     redisClient.restore(key, ttl, serializedValue, params)
   }
 
+  //  def get(key: String): String = {
+  //    redisClient.get(key)
+  //  }
+
+  //  def setGet(key: String, serializedValue: Array[Byte]): Array[Byte] = {
+  //    redisClient.setGet(key.getBytes, serializedValue)
+  //  }
+
 }

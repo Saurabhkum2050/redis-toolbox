@@ -1,6 +1,10 @@
 import JedisHelper.JListExtensions
 import redis.clients.jedis.params.{RestoreParams, ScanParams}
 
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.{Await, Future}
+import scala.concurrent.duration.Duration
+
 class BackupAndRestore(source: RedisService, target: RedisService) {
 
   private val BACKUP_DEFAULT_PATTERN = "*"
@@ -38,21 +42,36 @@ class BackupAndRestore(source: RedisService, target: RedisService) {
 
     println(s"Total no. of keys found: ${allKeys.length}")
     println(s"No. of selected keys by pattern: ${selectedKeys.length}")
+    println(s"\nStart backup & restore...")
 
-    val progressBar = new ProgressBar("Starting backup & restore", selectedKeys.length)
-    val result = selectedKeys
-      .zipWithIndex
-      .map(data => {
-        val (key, index) = data
+    val futures = selectedKeys
+      .map(key => Future {
         val dump = source.dump(key)
-        progressBar.setStep(index + 1)
         try {
-          (key, target.restore(key, RESTORE_TTL, dump, RESTORE_PARAMS))
+          val status = target.restore(key, RESTORE_TTL, dump, RESTORE_PARAMS)
+          println(s"Imported $key")
+          (key, status)
         } catch {
-          case e: Throwable =>
-            (key, e.getMessage)
+          case e: Throwable => (key, e.getMessage)
         }
       })
+    val result = benchmark(Await.result(Future.sequence(futures), Duration.Inf))
+
+    //    val progressBar = new ProgressBar("Starting backup & restore", selectedKeys.length)
+    //    val result = benchmark(selectedKeys
+    //      .zipWithIndex
+    //      .map(data => {
+    //        val (key, index) = data
+    //        val dump = source.dump(key)
+    //        progressBar.setStep(index + 1)
+    //        try {
+    //          (key, target.restore(key, RESTORE_TTL, dump, RESTORE_PARAMS))
+    //          //(key, target.setGet(key, dump.toCharArray.map(_.toByte)))
+    //        } catch {
+    //          case e: Throwable =>
+    //            (key, e.getMessage)
+    //        }
+    //      }))
     val failedKeys = result.filterNot(_._2 == "OK")
     if (failedKeys.isEmpty) {
       println("\nBackup & restore completed successfully!")
@@ -63,6 +82,14 @@ class BackupAndRestore(source: RedisService, target: RedisService) {
 
   def execute(): Unit = {
     execute(BACKUP_DEFAULT_PATTERN, List())
+  }
+
+  private def benchmark[R](block: => R): R = {
+    val t0 = System.nanoTime()
+    val result = block // call-by-name
+    val t1 = System.nanoTime()
+    println("\nElapsed time: " + (t1 - t0) / 1000000000 + "s")
+    result
   }
 
 }
