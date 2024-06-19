@@ -29,7 +29,7 @@ java -jar \
 ## Usage (Docker)
 
 ```bash
-docker run --rm -it \
+docker run --network=host --rm -it \
 -e SOURCE_HOST=192.168.0.222 \
 -e SOURCE_PORT=6379 \
 -e SOURCE_SECRET=shanky \
@@ -38,8 +38,10 @@ docker run --rm -it \
 -e TARGET_PORT=6379 \
 -e TARGET_SECRET=shanky \
 -e TARGET_DB=1 \
+-e SCAN_PATTERN="*" \
+-e EXCLUDE_PATTERNS="" \
 --name RedisToolBox \
-redis-toolbox:test
+redis-toolbox:v2
 ```
 
 
